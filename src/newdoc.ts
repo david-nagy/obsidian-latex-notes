@@ -83,6 +83,14 @@ async function loadTemplate(plugin: TexViewPlugin): Promise<string> {
 	return plugin.app.vault.read(file);
 }
 
+// Obsidian types `moment` through the separate moment package; where that isn't
+// resolvable (e.g. the community directory scanner) it becomes `any`, so give
+// the one call we make an explicit type.
+const now = moment as unknown as () => { format(fmt: string): string };
+function formatDate(fmt: string): string {
+	return now().format(fmt);
+}
+
 export async function createTexDocument(plugin: TexViewPlugin, folder?: TFolder) {
 	const { app } = plugin;
 	const title = await askTitle(app);
@@ -94,7 +102,7 @@ export async function createTexDocument(plugin: TexViewPlugin, folder?: TFolder)
 	let content = (await loadTemplate(plugin))
 		.replace(/\{\{title\}\}/g, () => escapeLatex(title))
 		.replace(/\{\{author\}\}/g, () => plugin.settings.author)
-		.replace(/\{\{date(?::([^}]*))?\}\}/g, (_m, fmt: string | undefined) => moment().format(fmt || 'YYYY-MM-DD'));
+		.replace(/\{\{date(?::([^}]*))?\}\}/g, (_m, fmt: string | undefined) => formatDate(fmt || 'YYYY-MM-DD'));
 	const cursor = content.indexOf('{{cursor}}');
 	content = content.replace(/\{\{cursor\}\}/g, '');
 
