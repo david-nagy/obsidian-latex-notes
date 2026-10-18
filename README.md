@@ -28,6 +28,7 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
 
 ## Settings
 
+- **Readable line length**: limits the width of LaTeX documents, like Obsidian's setting of the same name does for notes.
 - **Template file**: a `.tex` file used for new documents. Placeholders: `{{title}}`, `{{author}}`, `{{date}}` (or `{{date:YYYY-MM-DD}}`), `{{cursor}}`. Leave empty for the built-in template.
 - **Author**: fills `{{author}}`.
 - **Folder for new documents**: empty uses Obsidian's default location for new notes.

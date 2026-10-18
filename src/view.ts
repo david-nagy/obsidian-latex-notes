@@ -280,15 +280,19 @@ export class TexView extends TextFileView implements LiveHost {
 		this.setMode(this.mode === 'reading' ? 'live' : 'reading');
 	}
 
+	applyDisplaySettings() {
+		const readable = this.plugin.settings.readableLineLength;
+		this.editorHost.toggleClass('is-readable-line-width', readable);
+		this.readingHost.toggleClass('is-readable-line-width', readable);
+	}
+
 	private applyMode() {
 		const reading = this.mode === 'reading';
 		this.editorHost.toggle(!reading);
 		this.readingHost.toggle(reading);
 		this.editorHost.toggleClass('mode-source', this.mode === 'source');
 		this.editorHost.toggleClass('mode-live', this.mode === 'live');
-		const readable = (this.app.vault as unknown as { getConfig?: (k: string) => unknown }).getConfig?.('readableLineLength') !== false;
-		this.editorHost.toggleClass('is-readable-line-width', readable);
-		this.readingHost.toggleClass('is-readable-line-width', readable);
+		this.applyDisplaySettings();
 		setIcon(this.modeAction, reading ? 'edit-3' : 'book-open');
 		this.modeAction.setAttribute('aria-label', reading ? 'Edit' : 'Reading view');
 		this.sourceAction.toggle(!reading);
@@ -487,7 +491,7 @@ export class TexView extends TextFileView implements LiveHost {
 			const path = span.dataset.path;
 			if (!path) return;
 			const img = createEl('img', { cls: 'tex-img' });
-			img.setAttribute('style', span.getAttribute('style') ?? '');
+			if (span.style.width) img.setCssStyles({ width: span.style.width });
 			span.replaceWith(img);
 			void this.plugin.pdfToImage(path).then((url) => {
 				if (url) img.src = url;

@@ -176,8 +176,8 @@ function onWidgetMouseDown(view: EditorView, el: HTMLElement, evt: MouseEvent, h
 }
 
 function guessOffset(el: HTMLElement, evt: MouseEvent, src: string): number {
-	const caret = document.caretRangeFromPoint?.(evt.clientX, evt.clientY);
-	const node = caret?.startContainer;
+	const caret = document.caretPositionFromPoint?.(evt.clientX, evt.clientY);
+	const node = caret?.offsetNode;
 	if (!caret || !node || node.nodeType !== Node.TEXT_NODE || !el.contains(node) || (node.parentElement?.closest('mjx-container') ?? null)) {
 		const rect = el.getBoundingClientRect();
 		const ratio = rect.height ? (evt.clientY - rect.top) / rect.height : 0;
@@ -186,7 +186,7 @@ function guessOffset(el: HTMLElement, evt: MouseEvent, src: string): number {
 		return nl < 0 ? 0 : nl + 1;
 	}
 	const text = (node as Text).data;
-	const off = caret.startOffset;
+	const off = caret.offset;
 	let s = off;
 	let e = off;
 	while (s > 0 && /[\p{L}\p{N}]/u.test(text[s - 1]!)) s--;
@@ -208,8 +208,8 @@ function guessOffset(el: HTMLElement, evt: MouseEvent, src: string): number {
 	let k = 0;
 	let first = -1;
 	for (const m of src.matchAll(srcRe)) {
-		if (first < 0) first = m.index!;
-		if (k === before) return m.index! + (off - s);
+		if (first < 0) first = m.index;
+		if (k === before) return m.index + (off - s);
 		k++;
 	}
 	return first >= 0 ? first + (off - s) : 0;

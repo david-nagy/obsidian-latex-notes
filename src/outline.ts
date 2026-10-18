@@ -59,12 +59,14 @@ export class OutlineBridge {
 			this.warned = true;
 			return;
 		}
-		const bridge = this;
+		// Bound helpers, so the wrappers below can keep the Outline's own `this`.
+		const headingsFor = (f: TFile) => this.headingsFor(f);
+		const texLeaf = (f: TFile, l: WorkspaceLeaf | null) => this.texLeaf(f, l);
 		const uninstall = around(proto as unknown as OutlineView, {
 			getHeadings(next) {
 				return function (this: OutlineView) {
 					try {
-						if (isTex(this.file)) return bridge.headingsFor(this.file!);
+						if (isTex(this.file)) return headingsFor(this.file!);
 					} catch (e) {
 						console.error('LaTeX Notes outline:', e);
 					}
@@ -76,7 +78,7 @@ export class OutlineBridge {
 					const leaf = next.call(this);
 					if (leaf) return leaf;
 					try {
-						if (isTex(this.file)) return bridge.texLeaf(this.file!, this.leaf);
+						if (isTex(this.file)) return texLeaf(this.file!, this.leaf);
 					} catch (e) {
 						console.error('LaTeX Notes outline:', e);
 					}
@@ -87,7 +89,7 @@ export class OutlineBridge {
 				return function (this: OutlineView) {
 					try {
 						if (isTex(this.file)) {
-							const leaf = bridge.texLeaf(this.file!, this.leaf);
+							const leaf = texLeaf(this.file!, this.leaf);
 							if (leaf) return leaf.view;
 						}
 					} catch (e) {

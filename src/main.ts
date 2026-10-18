@@ -1,9 +1,26 @@
-import { loadPdfJs, Plugin, TAbstractFile, TFile, TFolder } from 'obsidian';
+import { loadPdfJs, Notice, Plugin, TAbstractFile, TFile, TFolder } from 'obsidian';
 import { BibEntry, parseBib } from './tex/bib';
 import { TexView, VIEW_TYPE_TEX } from './view';
 import { DEFAULT_SETTINGS, TexViewSettings, TexViewSettingTab } from './settings';
 import { createTexDocument } from './newdoc';
 import { OutlineBridge } from './outline';
+
+// The parts of Obsidian's bundled pdf.js that are used here (loadPdfJs is untyped).
+interface PdfViewport {
+	width: number;
+	height: number;
+}
+interface PdfPage {
+	getViewport(opts: { scale: number }): PdfViewport;
+	render(opts: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }): { promise: Promise<void> };
+}
+interface PdfDocument {
+	getPage(n: number): Promise<PdfPage>;
+	destroy(): Promise<void>;
+}
+interface PdfJs {
+	getDocument(src: { data: Uint8Array }): { promise: Promise<PdfDocument> };
+}
 
 export default class TexViewPlugin extends Plugin {
 	settings: TexViewSettings = { ...DEFAULT_SETTINGS };
@@ -14,7 +31,13 @@ export default class TexViewPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.registerView(VIEW_TYPE_TEX, (leaf) => new TexView(leaf, this));
-		this.registerExtensions(['tex'], VIEW_TYPE_TEX);
+		try {
+			this.registerExtensions(['tex'], VIEW_TYPE_TEX);
+		} catch (e) {
+			// Only one plugin can open a file extension (e.g. LaTeX Live or LaTeX Studio).
+			console.error('LaTeX Notes: could not register .tex files', e);
+			new Notice('LaTeX Notes: another plugin already opens .tex files. Disable it and reload LaTeX Notes to use it.', 10000);
+		}
 		this.addSettingTab(new TexViewSettingTab(this.app, this));
 		this.outline = new OutlineBridge(this);
 
@@ -86,6 +109,9 @@ export default class TexViewPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TEX)) {
+			if (leaf.view instanceof TexView) leaf.view.applyDisplaySettings();
+		}
 	}
 
 	onunload() {
@@ -108,13 +134,13 @@ export default class TexViewPlugin extends Plugin {
 		const cached = this.pdfCache.get(path);
 		if (cached && cached.mtime === file.stat.mtime) return cached.url;
 		try {
-			const pdfjs = await loadPdfJs();
+			const pdfjs = (await loadPdfJs()) as PdfJs;
 			const data = await this.app.vault.readBinary(file);
 			const doc = await pdfjs.getDocument({ data: new Uint8Array(data) }).promise;
 			try {
 				const page = await doc.getPage(1);
 				const viewport = page.getViewport({ scale: 2 });
-				const canvas = document.createElement('canvas');
+				const canvas = createEl('canvas');
 				canvas.width = Math.ceil(viewport.width);
 				canvas.height = Math.ceil(viewport.height);
 				const ctx = canvas.getContext('2d');

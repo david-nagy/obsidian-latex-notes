@@ -5,6 +5,8 @@ import { globalIgnores, defineConfig } from 'eslint/config';
 export default defineConfig(
 	globalIgnores([
 		'node_modules',
+		'build',
+		'scripts', // command-line dev tools, not part of the plugin
 		'dist',
 		'esbuild.config.mjs',
 		'version-bump.mjs',

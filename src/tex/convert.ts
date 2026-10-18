@@ -209,7 +209,7 @@ class Out {
 		this.cur += s;
 	}
 	space() {
-		if (this.cur && !/[\s ]$/.test(this.cur)) this.cur += ' ';
+		if (this.cur && !/[\s\u00a0]$/.test(this.cur)) this.cur += ' ';
 	}
 	par() {
 		if (this.inlineMode) return this.space();
@@ -266,7 +266,7 @@ function unescapePath(s: string): string {
 	return s.replace(/\\([_%#&$ ])/g, '$1').trim();
 }
 
-const REF_RE = /\u0001([a-zA-Z]+)\u0002([^\u0003]*)\u0003/g;
+const REF_RE = /\uE000([a-zA-Z]+)\uE001([^\uE002]*)\uE002/g;
 
 function slug(s: string): string {
 	return s.replace(/[^A-Za-z0-9_-]/g, '-');
@@ -333,7 +333,7 @@ class Converter {
 	diag: Diagnostics = { unknownCommands: {}, rawEnvironments: {}, missingAssets: [], missingCitations: [], missingRefs: [] };
 
 	constructor(private opts: ConvertOptions & { inlineFootnotes?: boolean }) {
-		this.bib = opts.bib ?? new Map();
+		this.bib = opts.bib ?? new Map<string, BibEntry>();
 	}
 
 	run(src: string): ConvertResult {
@@ -446,7 +446,7 @@ class Converter {
 			out.inline(lead + open + t + close + trail);
 			return;
 		}
-		for (const b of sub.done()) out.block(/^[<\w -￿\\(]/.test(b) && !b.startsWith('<div') ? open + b + close : b);
+		for (const b of sub.done()) out.block(/^[<\w\u00a0-\uffff\\(]/.test(b) && !b.startsWith('<div') ? open + b + close : b);
 	}
 
 	cmd(name: string, cur: Cursor, out: Out) {
@@ -552,7 +552,7 @@ class Converter {
 			case 'nameref': {
 				cur.star();
 				const label = rawText(cur.arg()).trim();
-				out.inline(`\u0001${name}\u0002${label}\u0003`);
+				out.inline(`\uE000${name}\uE001${label}\uE002`);
 				return;
 			}
 			case 'label': {
@@ -785,7 +785,7 @@ class Converter {
 			return;
 		}
 		const thmBase = name.replace(/\*$/, '');
-		const thm = this.theorems.get(name) ?? (THEOREM_NAMES[thmBase] ? { title: THEOREM_NAMES[thmBase]!, counter: thmBase, numbered: !name.endsWith('*') } : null);
+		const thm = this.theorems.get(name) ?? (THEOREM_NAMES[thmBase] ? { title: THEOREM_NAMES[thmBase], counter: thmBase, numbered: !name.endsWith('*') } : null);
 		if (thm) {
 			this.theorem(name, thm, n.c, out);
 			return;
@@ -1217,7 +1217,7 @@ class Converter {
 	}
 }
 
-const BIB_PLACEHOLDER = '\u0001bibliography\u0002\u0003';
+const BIB_PLACEHOLDER = '\uE000bibliography\uE001\uE002';
 
 // Splits the body of a thebibliography environment at \bibitem commands.
 function splitBibItems(nodes: Node[]): { key: string; label: Node[] | null; body: Node[] }[] {

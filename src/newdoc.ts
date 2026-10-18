@@ -1,4 +1,4 @@
-import { App, Modal, moment, normalizePath, Notice, Setting, TFile, TFolder } from 'obsidian';
+import { App, Modal, moment, normalizePath, Notice, Setting, TFolder } from 'obsidian';
 import { findBibFiles } from './tex/project';
 import { BUILTIN_TEMPLATE } from './settings';
 import { TexView } from './view';
@@ -113,5 +113,5 @@ export async function createTexDocument(plugin: TexViewPlugin, folder?: TFolder)
 		view.editor.dispatch({ selection: { anchor: Math.min(cursor, view.editor.state.doc.length) }, scrollIntoView: true });
 		view.editor.focus();
 	}
-	return file as TFile;
+	return file;
 }

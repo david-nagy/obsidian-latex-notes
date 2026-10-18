@@ -22,7 +22,7 @@ export async function expandIncludes(src: string, read: ReadFn, depth = 0, seen 
 	INCLUDE_RE.lastIndex = 0;
 	const matches = [...src.matchAll(INCLUDE_RE)];
 	for (const m of matches) {
-		if (isCommented(src, m.index!)) continue;
+		if (isCommented(src, m.index)) continue;
 		const name = (m[2] ?? m[3] ?? '').trim();
 		if (!name) continue;
 		const candidates = /\.[A-Za-z]+$/.test(name) ? [name] : [`${name}.tex`, name];
@@ -37,7 +37,7 @@ export async function expandIncludes(src: string, read: ReadFn, depth = 0, seen 
 			}
 		}
 		out += src.slice(last, m.index);
-		last = m.index! + m[0].length;
+		last = m.index + m[0].length;
 		if (content === null) {
 			missing.push(name);
 			continue;
