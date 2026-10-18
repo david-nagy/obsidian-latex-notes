@@ -36,7 +36,8 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
 
 ## Compatibility
 
-- Desktop only.
+- Desktop and mobile. Tested on macOS and iPhone; on phones, reading view is smoothest on iOS 18 or later.
+- Needs no TeX installation, so it works anywhere Obsidian runs.
 - Other plugins that open `.tex` files (for example LaTeX Live or LaTeX Studio) can't be enabled at the same time, because only one plugin can handle a file extension.
 - The Outline integration relies on internals of Obsidian's core Outline pane. If a future Obsidian version changes them, LaTeX Notes switches the integration off and the Outline shows nothing for `.tex` files; everything else keeps working.
 
