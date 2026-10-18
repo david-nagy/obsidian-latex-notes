@@ -104,8 +104,9 @@
 
 /* --- editor ------------------------------------------------------------- */
 
-.tex-view-content {
-	padding: 0 !important;
+/* Beats Obsidian's `.workspace-leaf-content .view-content` padding. */
+.workspace-leaf-content .view-content.tex-view-content {
+	padding: 0;
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
@@ -151,9 +152,10 @@
 	border-left-color: var(--caret-color);
 }
 
-.tex-editor-host .cm-selectionBackground,
-.tex-editor-host .cm-editor.cm-focused .cm-selectionBackground {
-	background: var(--text-selection) !important;
+/* More specific than CodeMirror's base-theme selection rules. */
+.tex-editor-host .cm-editor .cm-selectionLayer .cm-selectionBackground,
+.tex-editor-host .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+	background: var(--text-selection);
 }
 
 .tex-editor-host .cm-matchingBracket {
@@ -263,8 +265,9 @@
 	padding: 0;
 }
 
-.tex-setting-invalid {
-	border-color: var(--text-error) !important;
+.setting-item input.tex-setting-invalid,
+.setting-item input.tex-setting-invalid:focus {
+	border-color: var(--text-error);
 }
 
 /* --- narrow screens --------------------------------------------------------- */
@@ -285,7 +288,8 @@
 
 /* Only inline formulas wider than their paragraph (marked from view.ts), so
    ordinary inline math keeps its normal baseline. */
-mjx-container.tex-wide-math {
+.tex-view .tex-wide-math,
+.tex-lp-block .tex-wide-math {
 	display: inline-block;
 	max-width: 100%;
 	overflow-x: auto;
