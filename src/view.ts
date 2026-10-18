@@ -54,7 +54,9 @@ export class TexView extends TextFileView implements LiveHost {
 		this.contentEl.addClass('tex-view-content');
 		this.editorHost = this.contentEl.createDiv({ cls: 'tex-editor-host' });
 		this.readingHost = this.contentEl.createDiv({ cls: 'markdown-preview-view markdown-rendered tex-view' });
-		this.registerDomEvent(this.readingHost, 'scroll', () => this.scheduleOutlineHighlight());
+		// Throttled: reading the heading positions on every scroll frame forced a
+		// layout of the whole document, which made reading view stutter on phones.
+		this.registerDomEvent(this.readingHost, 'scroll', () => this.scheduleReadingHighlight(), { passive: true });
 	}
 
 	getViewType() {
@@ -181,7 +183,7 @@ export class TexView extends TextFileView implements LiveHost {
 		let line = -1;
 		if (this.mode === 'reading') {
 			const top = this.readingHost.getBoundingClientRect().top + 80;
-			const rendered = Array.from(this.readingHost.querySelectorAll<HTMLElement>('h2, h3, h4, h5, h6'));
+			const rendered = this.readingHeadings;
 			let current: HTMLElement | null = null;
 			for (const el of rendered) if (el.getBoundingClientRect().top <= top) current = el;
 			if (current) {
@@ -233,6 +235,17 @@ export class TexView extends TextFileView implements LiveHost {
 			this.outlineTimer = null;
 			this.plugin.outline?.refresh(this.file);
 		}, 500);
+	}
+
+	private readingHeadings: HTMLElement[] = [];
+	private readingHighlightTimer: number | null = null;
+
+	private scheduleReadingHighlight() {
+		if (this.readingHighlightTimer !== null) return;
+		this.readingHighlightTimer = window.setTimeout(() => {
+			this.readingHighlightTimer = null;
+			this.plugin.outline?.highlight(this);
+		}, 150);
 	}
 
 	private scheduleOutlineHighlight() {
@@ -439,6 +452,7 @@ export class TexView extends TextFileView implements LiveHost {
 		if (token !== this.readingToken) return;
 		this.decorate(sizer);
 		this.readingClicks(sizer, child);
+		this.readingHeadings = Array.from(sizer.querySelectorAll<HTMLElement>('h2, h3, h4, h5, h6'));
 		view.scrollTop = scroll;
 		this.readingBusy = false;
 		if (this.pendingReadingLine !== null) {

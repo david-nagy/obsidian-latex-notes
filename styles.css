@@ -299,3 +299,11 @@ mjx-container.tex-wide-math {
 	max-width: 100%;
 	overflow-x: auto;
 }
+
+/* Reading view renders the whole document at once; let the browser skip layout
+   and painting of blocks that are off screen (the remembered size keeps the
+   scrollbar stable). */
+.tex-view > .markdown-preview-sizer > * {
+	content-visibility: auto;
+	contain-intrinsic-size: auto 120px;
+}
