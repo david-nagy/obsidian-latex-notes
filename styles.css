@@ -266,3 +266,36 @@
 .tex-setting-invalid {
 	border-color: var(--text-error) !important;
 }
+
+/* --- narrow screens --------------------------------------------------------- */
+
+/* Let the editor content shrink to the pane width (phones, narrow splits). */
+.tex-editor-host .cm-content {
+	min-width: 0;
+	flex-shrink: 1;
+}
+
+/* Wide formulas and tables scroll on their own instead of widening the page. */
+.tex-lp-block .math-block,
+.tex-view .math-block {
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+/* Only inline formulas wider than their paragraph (marked from view.ts), so
+   ordinary inline math keeps its normal baseline. */
+mjx-container.tex-wide-math {
+	display: inline-block;
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+	vertical-align: bottom;
+}
+
+.tex-lp-block table,
+.tex-view table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+}

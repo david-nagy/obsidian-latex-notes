@@ -175,9 +175,19 @@ function onWidgetMouseDown(view: EditorView, el: HTMLElement, evt: MouseEvent, h
 	view.focus();
 }
 
+// Text node and offset under a point. caretPositionFromPoint is the standard;
+// older WebKit (iOS before 18.2) only has caretRangeFromPoint.
+function caretAt(x: number, y: number): { node: Node; offset: number } | null {
+	const pos = document.caretPositionFromPoint?.(x, y);
+	if (pos) return { node: pos.offsetNode, offset: pos.offset };
+	const legacy = document as unknown as { caretRangeFromPoint?: (x: number, y: number) => { startContainer: Node; startOffset: number } | null };
+	const range = legacy.caretRangeFromPoint?.(x, y);
+	return range ? { node: range.startContainer, offset: range.startOffset } : null;
+}
+
 function guessOffset(el: HTMLElement, evt: MouseEvent, src: string): number {
-	const caret = document.caretPositionFromPoint?.(evt.clientX, evt.clientY);
-	const node = caret?.offsetNode;
+	const caret = caretAt(evt.clientX, evt.clientY);
+	const node = caret?.node;
 	if (!caret || !node || node.nodeType !== Node.TEXT_NODE || !el.contains(node) || (node.parentElement?.closest('mjx-container') ?? null)) {
 		const rect = el.getBoundingClientRect();
 		const ratio = rect.height ? (evt.clientY - rect.top) / rect.height : 0;

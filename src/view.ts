@@ -483,6 +483,13 @@ export class TexView extends TextFileView implements LiveHost {
 				wrap.appendChild(img);
 			}
 		});
+		// Inline formulas that can't fit their paragraph (common on phones) get their own scroll box.
+		window.requestAnimationFrame(() => {
+			el.querySelectorAll<HTMLElement>('.math-inline mjx-container').forEach((m) => {
+				const block = m.closest<HTMLElement>('p, li, td, th, .callout-content') ?? el;
+				if (m.offsetWidth > block.clientWidth) m.addClass('tex-wide-math');
+			});
+		});
 		el.querySelectorAll<HTMLElement>('.tex-cite[aria-label], .tex-fn[aria-label]').forEach((t) => {
 			const label = t.getAttribute('aria-label');
 			if (label) setTooltip(t, label, { delay: 300 });
