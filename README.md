@@ -44,6 +44,20 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
 
 LaTeX Notes works entirely offline and never makes network requests. It only writes to a `.tex` file when you edit it.
 
+## About this code, and why it should be safe
+
+The code in this plugin was written by an AI model (Anthropic's Claude), directed and tested by the maintainer. AI-written code can contain mistakes like any other code, so the plugin is deliberately built to keep what it can do, and what a bad document could make it do, as small as possible:
+
+- **No network access.** The plugin never makes a network request. It can't send your notes anywhere or download anything.
+- **No code execution.** It doesn't use `eval`, Node.js APIs, shell commands or anything outside Obsidian's plugin API.
+- **Vault-only file access.** It reads files only through Obsidian's vault API (the `.tex` file, its `\input` files, `.bib` files and figures), so it can't reach files outside your vault. It writes only when you edit a document or create a new one.
+- **Documents are treated as untrusted.** A `.tex` or `.bib` file from someone else can't inject HTML or scripts: text from documents is escaped before rendering, links are kept only for `http(s)` and `mailto` addresses (`javascript:`, `file:` and similar become plain text), MathJax commands that create links or set styles are removed, and PDF figures are opened in pdf.js's safe mode. This was tested with deliberately malicious files.
+- **One small runtime dependency.** Apart from Obsidian and the CodeMirror editor it ships with, the only bundled library is [monkey-around](https://github.com/pjeby/monkey-around) (a 1.7 KB helper for safely patching the Outline pane), plus CodeMirror's LaTeX syntax mode.
+- **Reproducible releases.** Release files are built by GitHub Actions from the tagged source, with build provenance attestation, not uploaded from someone's computer.
+- **Open source.** All code is in this repository. The parts that handle untrusted input are `src/tex/` (the converter) and `src/view.ts` (rendering); please report anything that looks wrong.
+
+As the MIT license says, the software comes with no warranty.
+
 ## Installing a beta version
 
 Before it's listed in the community plugins, you can install LaTeX Notes with [BRAT](https://github.com/TfTHacker/obsidian42-brat): install BRAT, choose "Add beta plugin", and enter this repository's URL.
