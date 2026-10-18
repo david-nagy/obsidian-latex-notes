@@ -53,7 +53,7 @@ const IGNORE: Record<string, string> = {
 	linewidth: '', columnwidth: '', arraystretch: '', tabcolsep: '', bibfont: '', vfill: '', hrule: '',
 	addcontentsline: 'mmm', input: 'm', include: 'm', subcaption: 'om', urlstyle: 'm', ignorespaces: '',
 	unskip: '', leavevmode: '', footnotemark: 'o', footnotetext: 'om', bibitem: 'om', vskip: '',
-	hskip: '', kern: '', newline: '', newblock: '', typeout: 'm',
+	hskip: '', kern: '', newline: '', newblock: '', typeout: 'm', rule: 'omm', specialrule: 'mmm', boldmath: '', unboldmath: '', addlinespace: 'o',
 };
 
 const STYLE_DECL: Record<string, [string, string]> = {
@@ -524,6 +524,8 @@ class Converter {
 				this.emitTitle(out);
 				return;
 			case 'and':
+			case 'And': // NeurIPS-style author separators
+			case 'AND':
 				out.inline('<br>');
 				return;
 			case 'thanks':
@@ -836,7 +838,14 @@ class Converter {
 		const body = this.blocks(cur.rest());
 		this.last = saved;
 		const optText = opt ? ` (${this.inline(opt)})` : '';
-		const type = /definition|defn|^def$|notation|axiom/.test(name) ? 'tex-definition' : /remark|rem|note|example|ex$|observation/.test(name) ? 'tex-remark' : 'tex-theorem';
+		// Classify by whole words of the environment name and its display title
+		// ("theorem" contains "rem", so substring matching would call it a remark).
+		const words = `${name.replace(/\*$/, '')} ${thm.title}`.toLowerCase();
+		const type = /\b(definition|defn|def|notation|axiom)\b/.test(words)
+			? 'tex-definition'
+			: /\b(remark|rem|note|example|ex|observation)\b/.test(words)
+				? 'tex-remark'
+				: 'tex-theorem';
 		out.block(callout(type, `<span class="tex-anchor" id="${anchor}"></span>${thm.title}${num ? ' ' + num : ''}${optText}`, body));
 	}
 

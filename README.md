@@ -2,6 +2,21 @@
 
 Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX to Obsidian markdown in memory and renders it with Obsidian's own renderer, so headings, math, callouts and your theme look exactly like your other notes. There's no TeX installation and no PDF compilation, and no `.md` files are written.
 
+![A LaTeX document in reading view: title, abstract, numbered section, numbered equation, citation and a definition](docs/reading-view.png)
+
+**Edit in place.** The paragraph you're editing shows as LaTeX; everything else stays rendered. The core Outline pane lists the document's sections.
+
+![Live editing: one paragraph shown as LaTeX source, the figure and table below rendered, and the Outline pane on the right](docs/live-editing.png)
+
+<details>
+<summary>More screenshots: theorems, proofs, figures and tables (dark theme)</summary>
+
+![A theorem and its proof as callouts, with numbered aligned equations and clickable references](docs/theorems-dark.png)
+
+![A figure with a numbered caption and a table, both rendered from LaTeX](docs/figures-dark.png)
+
+</details>
+
 ## Features
 
 - **Three modes**, switchable from the view header or the command palette:
