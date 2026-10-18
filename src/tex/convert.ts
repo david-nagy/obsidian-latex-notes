@@ -268,6 +268,26 @@ function unescapePath(s: string): string {
 
 const REF_RE = /\uE000([a-zA-Z]+)\uE001([^\uE002]*)\uE002/g;
 
+// Links from documents are only kept for web and mail addresses; anything else
+// (javascript:, file:, app:, data:) is shown as plain text.
+function safeUrl(url: string): string | null {
+	const u = url.trim();
+	if (!/^(https?:\/\/|mailto:)/i.test(u)) return null;
+	// Percent-encode only what could end the markdown link or open HTML.
+	return u.replace(/[\s()<>"'`\\[\]]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+}
+
+function linkMd(label: string, url: string): string {
+	const safe = safeUrl(url);
+	return safe ? `[${label}](${safe})` : label;
+}
+
+// MathJax extensions that create links or set HTML attributes/CSS from the
+// document: drop the first argument and keep the formula.
+function sanitizeMath(m: string): string {
+	return m.replace(/\\(href|class|cssId|style|data)\s*\{[^{}]*\}/g, '');
+}
+
 function slug(s: string): string {
 	return s.replace(/[^A-Za-z0-9_-]/g, '-');
 }
@@ -532,13 +552,13 @@ class Converter {
 			case 'href': {
 				const { a } = cur.args('mm');
 				const url = unescapePath(rawText(a[0]));
-				out.inline(`[${this.inline(a[1] ?? [])}](${url.replace(/[()\s]/g, encodeURIComponent)})`);
+				out.inline(linkMd(this.inline(a[1] ?? []), url));
 				return;
 			}
 			case 'url':
 			case 'nolinkurl': {
 				const url = unescapePath(rawText(cur.arg()));
-				out.inline(`<${url}>`);
+				out.inline(name === 'url' ? linkMd(escapeMd(url), url) : escapeMd(url));
 				return;
 			}
 			case 'ref':
@@ -974,14 +994,14 @@ class Converter {
 	// --- math -----------------------------------------------------------------
 
 	inlineMath(raw: string): string {
-		let t = stripComments(raw).replace(/\s*\n\s*/g, ' ').trim();
+		let t = sanitizeMath(stripComments(raw)).replace(/\s*\n\s*/g, ' ').trim();
 		t = t.replace(/\\label\{[^}]*\}/g, '');
 		if (this.inTable) t = t.replace(/\\\|/g, '\\Vert ').replace(/\|/g, '\\vert ');
 		return t ? `$${t}$` : '';
 	}
 
 	displayMath(env: string | null, body: string): string {
-		let b = stripComments(body).trim();
+		let b = sanitizeMath(stripComments(body)).trim();
 		const base = env ? env.replace(/\*$/, '') : null;
 		const numbered = env !== null && !env.endsWith('*') && base !== 'displaymath' && base !== 'math';
 		const anchors: string[] = [];
@@ -1188,8 +1208,10 @@ class Converter {
 			if (f.pages) s += `, ${this.bibText(f.pages)}`;
 			s += '. ';
 		}
-		if (f.doi) s += `<https://doi.org/${f.doi.replace(/^https?:\/\/doi.org\//, '')}>`;
-		else if (f.url) s += `<${f.url}>`;
+		if (f.doi) {
+			const doi = `https://doi.org/${f.doi.replace(/^https?:\/\/(dx\.)?doi.org\//, '')}`;
+			s += linkMd(escapeMd(doi), doi);
+		} else if (f.url) s += linkMd(escapeMd(f.url), f.url);
 		return s.trim();
 	}
 
@@ -1235,7 +1257,12 @@ function splitBibItems(nodes: Node[]): { key: string; label: Node[] | null; body
 }
 
 function plainText(md: string): string {
-	return md.replace(/<[^>]*>/g, '').replace(/\\(.)/g, '$1').replace(/\s+/g, ' ').trim();
+	return md
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+		.replace(/\\(.)/g, '$1')
+		.replace(/<[^>]*>/g, '')
+		.replace(/\s+/g, ' ')
+		.trim();
 }
 
 export interface BlocksResult {

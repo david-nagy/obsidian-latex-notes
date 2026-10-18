@@ -19,7 +19,7 @@ interface PdfDocument {
 	destroy(): Promise<void>;
 }
 interface PdfJs {
-	getDocument(src: { data: Uint8Array }): { promise: Promise<PdfDocument> };
+	getDocument(src: { data: Uint8Array; isEvalSupported?: boolean }): { promise: Promise<PdfDocument> };
 }
 
 export default class TexViewPlugin extends Plugin {
@@ -136,7 +136,8 @@ export default class TexViewPlugin extends Plugin {
 		try {
 			const pdfjs = (await loadPdfJs()) as PdfJs;
 			const data = await this.app.vault.readBinary(file);
-			const doc = await pdfjs.getDocument({ data: new Uint8Array(data) }).promise;
+			// isEvalSupported: false closes the font-compilation path used by CVE-2024-4367.
+			const doc = await pdfjs.getDocument({ data: new Uint8Array(data), isEvalSupported: false }).promise;
 			try {
 				const page = await doc.getPage(1);
 				const viewport = page.getViewport({ scale: 2 });

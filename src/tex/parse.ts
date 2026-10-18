@@ -90,6 +90,23 @@ class Parser {
 				}
 				flush();
 				out.push({ t: 'cmd', name });
+				// URLs are read verbatim, as the url package does: % and # are ordinary characters.
+				if (name === 'url' || name === 'nolinkurl' || name === 'href') {
+					const m = /^\s*\{/.exec(s.slice(this.i, this.i + 50));
+					if (m) {
+						const start = this.i + m[0].length;
+						let depth = 1;
+						let j = start;
+						for (; j < s.length && depth > 0; j++) {
+							if (s[j] === '{') depth++;
+							else if (s[j] === '}') depth--;
+							else if (s[j] === '\n' && s[j + 1] === '\n') break;
+						}
+						const end = depth === 0 ? j - 1 : j;
+						out.push({ t: 'group', c: [{ t: 'text', v: s.slice(start, end) }] });
+						this.i = depth === 0 ? j : end;
+					}
+				}
 				continue;
 			}
 			if (ch === '{') {
