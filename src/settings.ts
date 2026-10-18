@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, normalizePath, PluginSettingTab, Setting, SettingDefinitionItem, TAbstractFile, TFile, TFolder } from 'obsidian';
+import { App, normalizePath, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
 import type TexViewPlugin from './main';
 
 export interface TexViewSettings {
@@ -60,31 +60,6 @@ export const BUILTIN_TEMPLATE = String.raw`\documentclass[11pt]{article}
 
 \end{document}
 `;
-
-class FileSuggest extends AbstractInputSuggest<TAbstractFile> {
-	constructor(
-		app: App,
-		private input: HTMLInputElement,
-		private filter: (f: TAbstractFile) => boolean,
-	) {
-		super(app, input);
-	}
-	getSuggestions(query: string): TAbstractFile[] {
-		const q = query.toLowerCase();
-		return this.app.vault
-			.getAllLoadedFiles()
-			.filter((f) => this.filter(f) && f.path.toLowerCase().includes(q))
-			.slice(0, 50);
-	}
-	renderSuggestion(file: TAbstractFile, el: HTMLElement) {
-		el.setText(file.path || '/');
-	}
-	selectSuggestion(file: TAbstractFile) {
-		this.setValue(file.path);
-		this.input.dispatchEvent(new Event('input'));
-		this.close();
-	}
-}
 
 export class TexViewSettingTab extends PluginSettingTab {
 	constructor(
@@ -159,7 +134,6 @@ export class TexViewSettingTab extends PluginSettingTab {
 			.setDesc(TEXT.templateDesc);
 		templateSetting.addText((text) => {
 			text.setPlaceholder('templates/LaTeX document.tex').setValue(s.templatePath);
-			new FileSuggest(this.app, text.inputEl, (f) => f instanceof TFile && f.extension === 'tex');
 			text.onChange((v) => {
 				s.templatePath = normalizePath(v.trim()) === '/' ? '' : v.trim();
 				const ok = !s.templatePath || this.app.vault.getFileByPath(normalizePath(s.templatePath));
@@ -183,7 +157,6 @@ export class TexViewSettingTab extends PluginSettingTab {
 			.setDesc(TEXT.folderDesc)
 			.addText((text) => {
 				text.setPlaceholder('Default location').setValue(s.newFileFolder);
-				new FileSuggest(this.app, text.inputEl, (f) => f instanceof TFolder);
 				text.onChange((v) => {
 					s.newFileFolder = v.trim();
 					save();
