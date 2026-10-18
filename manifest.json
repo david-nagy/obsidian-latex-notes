@@ -1,0 +1,9 @@
+{
+	"id": "latex-notes",
+	"name": "LaTeX Notes",
+	"version": "0.1.0",
+	"minAppVersion": "1.7.2",
+	"description": "Open .tex files as rendered, editable notes: LaTeX is converted to markdown in memory and shown with your theme. No TeX installation needed.",
+	"author": "david-nagy",
+	"isDesktopOnly": true
+}
