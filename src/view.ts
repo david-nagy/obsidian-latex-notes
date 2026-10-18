@@ -9,7 +9,7 @@ import { convert, convertBlocks, ConvertOptions, Diagnostics } from './tex/conve
 import { BibEntry } from './tex/bib';
 import { expandIncludes, findBibFiles } from './tex/project';
 import { segment } from './tex/blocks';
-import { LiveData, LiveHost, livePreview, liveData, refreshLive } from './live';
+import { clearLiveCache, LiveData, LiveHost, livePreview, liveData, refreshLive } from './live';
 import { texHighlighter } from './highlight';
 import { scanHeadings } from './tex/headings';
 import type TexViewPlugin from './main';
@@ -96,6 +96,7 @@ export class TexView extends TextFileView implements LiveHost {
 		if (!this.editor) {
 			this.editor = new EditorView({ state: this.makeState(data), parent: this.editorHost });
 		} else if (clear) {
+			clearLiveCache(this);
 			this.editor.setState(this.makeState(data));
 		} else if (data !== this.editor.state.doc.toString()) {
 			this.editor.dispatch({ changes: { from: 0, to: this.editor.state.doc.length, insert: data }, annotations: external.of(true) });
@@ -110,6 +111,7 @@ export class TexView extends TextFileView implements LiveHost {
 	}
 
 	clear(): void {
+		clearLiveCache(this);
 		this.editor?.setState(this.makeState(''));
 		this.readingHost.empty();
 		this.deps.clear();
@@ -121,6 +123,7 @@ export class TexView extends TextFileView implements LiveHost {
 	}
 
 	async onClose() {
+		clearLiveCache(this);
 		this.editor?.destroy();
 		this.editor = null;
 		this.readingChild?.unload();
@@ -248,7 +251,11 @@ export class TexView extends TextFileView implements LiveHost {
 		}
 		if (!this.deps.has(file.path)) return;
 		if (this.mode === 'reading') this.scheduleReading();
-		else if (this.mode === 'live') this.editor?.dispatch({ effects: refreshLive.of(null) });
+		else if (this.mode === 'live') {
+			// A changed figure or .bib can render differently from the same markdown.
+			clearLiveCache(this);
+			this.editor?.dispatch({ effects: refreshLive.of(null) });
+		}
 	}
 
 	private async reloadIfChangedOnDisk(file: TFile) {

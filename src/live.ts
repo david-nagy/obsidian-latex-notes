@@ -29,7 +29,40 @@ const setData = StateEffect.define<LiveData>();
 export const refreshLive = StateEffect.define<null>();
 
 const heightCache = new Map<string, number>();
-const components = new WeakMap<HTMLElement, Component>();
+
+// Rendered blocks are kept and reused when they scroll back into view, so
+// scrolling doesn't re-render markdown and re-typeset math (slow on phones).
+// One cache per open document, oldest entries evicted first.
+interface CachedBlock {
+	el: HTMLElement;
+	comp: Component;
+}
+const MAX_CACHED = 500;
+const uncached = new WeakMap<HTMLElement, Component>();
+const caches = new WeakMap<LiveHost, Map<string, CachedBlock>>();
+
+function cacheFor(host: LiveHost): Map<string, CachedBlock> {
+	let c = caches.get(host);
+	if (!c) caches.set(host, (c = new Map<string, CachedBlock>()));
+	return c;
+}
+
+function evict(cache: Map<string, CachedBlock>) {
+	for (const [key, entry] of cache) {
+		if (cache.size <= MAX_CACHED) break;
+		if (entry.el.isConnected) continue;
+		entry.comp.unload();
+		cache.delete(key);
+	}
+}
+
+// Drops all cached blocks of a document (when it closes or another file opens).
+export function clearLiveCache(host: LiveHost) {
+	const cache = caches.get(host);
+	if (!cache) return;
+	for (const entry of cache.values()) entry.comp.unload();
+	cache.clear();
+}
 
 function mapSpan<T extends Span>(s: T, ch: ChangeDesc): T {
 	return { ...s, from: ch.mapPos(s.from, -1), to: ch.mapPos(s.to, 1) };
@@ -62,20 +95,44 @@ class RenderedWidget extends WidgetType {
 	}
 
 	toDOM(view: EditorView): HTMLElement {
+		const cache = cacheFor(this.host);
+		const key = `${this.cls}\n${this.md}`;
+		const hit = cache.get(key);
+		// Reuse unless the same block is already on screen (identical paragraphs).
+		if (hit && !hit.el.isConnected) {
+			cache.delete(key);
+			cache.set(key, hit); // most recently used
+			return hit.el;
+		}
 		const el = createDiv({ cls: `tex-lp-block markdown-rendered ${this.cls}` });
 		const comp = new Component();
 		comp.load();
-		components.set(el, comp);
 		void this.host.renderInto(el, this.md, comp).then(() => {
 			heightCache.set(this.md, el.offsetHeight);
-			view.requestMeasure();
+			EditorView.findFromDOM(el)?.requestMeasure();
 		});
-		el.addEventListener('mousedown', (evt) => onWidgetMouseDown(view, el, evt, this.host));
+		// Look the editor up at event time: a cached element can outlive one editor state.
+		el.addEventListener('mousedown', (evt) => {
+			const ed = EditorView.findFromDOM(el) ?? view;
+			onWidgetMouseDown(ed, el, evt, this.host);
+		});
+		if (!hit) {
+			cache.set(key, { el, comp });
+			evict(cache);
+		} else {
+			// Duplicate of a block that is on screen: not cached, freed on destroy.
+			uncached.set(el, comp);
+		}
 		return el;
 	}
 
 	destroy(el: HTMLElement) {
-		components.get(el)?.unload();
+		// Cached elements stay alive for reuse; only uncached duplicates are freed.
+		const comp = uncached.get(el);
+		if (comp) {
+			comp.unload();
+			uncached.delete(el);
+		}
 	}
 
 	ignoreEvent() {
