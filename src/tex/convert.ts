@@ -296,6 +296,26 @@ function slug(s: string): string {
 	return s.replace(/[^A-Za-z0-9_-]/g, '-');
 }
 
+function formatCounter(style: string, n: number): string {
+	if (style === 'alph' || style === 'Alph') {
+		const a = n >= 1 && n <= 26 ? String.fromCharCode(96 + n) : String(n);
+		return style === 'Alph' ? a.toUpperCase() : a;
+	}
+	if (style === 'roman' || style === 'Roman') {
+		let r = '';
+		let k = n;
+		for (const [v, sym] of [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']] as const) {
+			while (k >= v) {
+				r += sym;
+				k -= v;
+			}
+		}
+		const out = n > 0 ? r : String(n);
+		return style === 'Roman' ? out.toUpperCase() : out;
+	}
+	return String(n);
+}
+
 function callout(type: string, title: string, blocks: string[], fold = ''): string {
 	const body = blocks
 		.join('\n\n')
@@ -331,6 +351,8 @@ class Converter {
 	sec = [0, 0, 0, 0, 0];
 	hasChapters = false;
 	tikzHead: string[] = [];
+	// The document's own counters (\newcounter), by name.
+	counters = new Map<string, number>();
 	appendix = false;
 	eq = 0;
 	fig = 0;
@@ -394,6 +416,7 @@ class Converter {
 			else if (n.name === 'author') this.author = cur.args('om').a[1] ?? null;
 			else if (n.name === 'date') this.date = cur.arg();
 			else if (n.name === 'newtheorem') this.defineTheorem(cur);
+			else if (n.name === 'newcounter') this.counters.set(rawText(cur.args('mo').a[0]).trim(), 0);
 		}
 	}
 
@@ -639,6 +662,7 @@ class Converter {
 			out.inline(this.cite(name, star, a[0] ?? null, a[1] ?? null, rawText(a[2])));
 			return;
 		}
+		if (this.counter(name, cur, out)) return;
 		if (name in IGNORE) {
 			cur.args(IGNORE[name]!);
 			return;
@@ -698,6 +722,43 @@ class Converter {
 			const d = this.inline(this.date);
 			if (d) out.block(`<span class="tex-mark-date"></span>${d}`);
 		}
+	}
+
+	// Commands on the document's own counters. Built-in counters (section, figure, …) are numbered by
+	// the converter itself, so commands on those are ignored.
+	counter(name: string, cur: Cursor, out: Out): boolean {
+		if (name === 'newcounter') {
+			const c = rawText(cur.args('mo').a[0]).trim();
+			if (!this.counters.has(c)) this.counters.set(c, 0);
+			return true;
+		}
+		if (name.startsWith('the') && this.counters.has(name.slice(3))) {
+			out.inline(String(this.counters.get(name.slice(3))));
+			return true;
+		}
+		const numbered = /^(arabic|roman|Roman|alph|Alph|value)$/.test(name);
+		if (!numbered && !/^(setcounter|addtocounter|stepcounter|refstepcounter)$/.test(name)) return false;
+		const save = cur.i;
+		const c = rawText(cur.arg() ?? []).trim();
+		if (!this.counters.has(c)) {
+			cur.i = save;
+			return false;
+		}
+		const v = this.counters.get(c)!;
+		if (numbered) {
+			out.inline(formatCounter(name, v));
+		} else if (name === 'setcounter' || name === 'addtocounter') {
+			const n = parseInt(rawText(cur.arg()).trim(), 10);
+			if (!Number.isNaN(n)) this.counters.set(c, name === 'setcounter' ? n : v + n);
+		} else {
+			this.counters.set(c, v + 1);
+			if (name === 'refstepcounter') {
+				const anchor = this.anchorId(c.replace(/[^a-zA-Z0-9-]/g, ''));
+				out.inline(`<span class="tex-anchor" id="${anchor}"></span>`);
+				this.last = { num: String(v + 1), anchor, kind: '' };
+			}
+		}
+		return true;
 	}
 
 	anchorId(prefix: string): string {

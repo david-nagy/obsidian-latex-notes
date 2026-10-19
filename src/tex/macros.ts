@@ -1,5 +1,3 @@
-import { stripComments } from './parse';
-
 // Expansion of the document's own macros (\newcommand, \def, \DeclareMathOperator, …) before
 // conversion, so they work in text, in math and in diagrams alike. Only simple substitution macros
 // are expanded; ones that program TeX (conditionals, counters, nested definitions) are left as they
@@ -20,7 +18,11 @@ export type Macros = Map<string, Macro>;
 const DEFINERS = new Set(['newcommand', 'renewcommand', 'providecommand', 'DeclareRobustCommand', 'DeclareMathOperator', 'def', 'gdef', 'edef', 'xdef']);
 
 // Bodies that program TeX rather than abbreviate text; expanding them would produce nonsense.
-const UNSAFE = /\\(?:if(?!f(?![a-zA-Z@]))[a-zA-Z@]*|fi|else|or|expandafter|csname|endcsname|[egx]?def|let|futurelet|noexpand|unexpanded|newcommand|renewcommand|providecommand|newcounter|setcounter|addtocounter|(?:ref)?stepcounter|makeatletter|makeatother)(?![a-zA-Z@])/;
+const UNSAFE = /\\(?:if(?!f(?![a-zA-Z@]))[a-zA-Z@]*|fi|else|or|expandafter|csname|endcsname|[egx]?def|let|futurelet|noexpand|unexpanded|newcommand|renewcommand|providecommand|makeatletter|makeatother)(?![a-zA-Z@])/;
+
+// The common "is this argument empty?" test, \ifx\relax#1\relax … \else … \fi (or with
+// \detokenize), which optional-argument macros use. It's evaluated during expansion.
+const EMPTY_TEST = /\\if(?:x\s*\\relax|\s*\\relax\s*\\detokenize\s*\{)\s*#(\d)\s*\}?\s*\\relax([\s\S]*?)(?:\\else(?![a-zA-Z@])([\s\S]*?))?\\fi(?![a-zA-Z@])/g;
 
 const VERBATIM = /^\\begin\s*\{(verbatim\*?|Verbatim\*?|lstlisting|minted|comment)\}/;
 
@@ -113,7 +115,9 @@ function readDefinition(s: string, cmd: string, start: number): { name: string; 
 const BUILTIN: [string, Macro][] = [['bm', { params: 1, body: '\\boldsymbol{#1}' }]];
 
 export function collectMacros(src: string): Macros {
-	const s = stripComments(src);
+	// As in TeX, a comment also removes its line break and the next line's indentation, so macro
+	// bodies written over several lines with trailing % don't gain paragraph breaks.
+	const s = src.replace(/(^|[^\\])%[^\n]*(?:\n[ \t]*)?/g, '$1');
 	const macros: Macros = new Map(BUILTIN);
 	const re = /\\(newcommand|renewcommand|providecommand|DeclareRobustCommand|DeclareMathOperator|def|gdef|edef|xdef)(?![a-zA-Z@])/g;
 	let m: RegExpExecArray | null;
@@ -121,7 +125,7 @@ export function collectMacros(src: string): Macros {
 		const def = readDefinition(s, m[1]!, re.lastIndex);
 		if (!def) continue;
 		re.lastIndex = def.end;
-		if (!def.macro || UNSAFE.test(def.macro.body)) {
+		if (!def.macro || UNSAFE.test(def.macro.body.replace(EMPTY_TEST, ''))) {
 			macros.delete(def.name);
 			continue;
 		}
@@ -224,7 +228,10 @@ export function expandMacros(src: string, macros: Macros): string {
 				continue;
 			}
 			budget--;
-			let repl = macro.body.replace(/##|#(\d)/g, (all, k: string | undefined) => (k ? args[Number(k) - 1] ?? '' : '#'));
+			let repl = macro.body.replace(EMPTY_TEST, (_m, k: string, then: string, otherwise: string | undefined) =>
+				(args[Number(k) - 1] ?? '').trim() ? (otherwise ?? '') : then,
+			);
+			repl = repl.replace(/##|#(\d)/g, (all, k: string | undefined) => (k ? args[Number(k) - 1] ?? '' : '#'));
 			repl = run(repl, depth + 1);
 			// Keep a following letter from fusing with a trailing control word (\R x -> \mathbb{R}x is fine,
 			// but \foo x -> \alphax is not).
