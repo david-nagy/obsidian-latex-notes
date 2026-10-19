@@ -5,6 +5,7 @@ import { MATH_ENVS, Node, parse, stripComments } from './parse';
 import { applyAccent, ACCENTS, escapeHtml, escapeMd, SYMBOLS, texText } from './text';
 import { BibEntry, parseName, splitNames } from './bib';
 import { TIKZ_ENVS, tikzBlock, tikzPreamble } from './tikz';
+import { collectMacros, expandMacros } from './macros';
 
 export interface AssetRef {
 	kind: 'image' | 'pdf';
@@ -322,7 +323,7 @@ function isListBlock(b: string): boolean {
 }
 
 export function convert(src: string, opts: ConvertOptions = {}): ConvertResult {
-	return new Converter(opts).run(src);
+	return new Converter(opts).run(expandMacros(src, collectMacros(src)));
 }
 
 class Converter {
@@ -1292,7 +1293,10 @@ export interface BlocksResult {
 
 // Converts a document block by block (for live preview). Numbering, labels and
 // citations are shared across blocks exactly as in a full conversion.
-export function convertBlocks(preamble: string, blocks: string[], opts: ConvertOptions = {}): BlocksResult {
+export function convertBlocks(rawPreamble: string, rawBlocks: string[], opts: ConvertOptions = {}): BlocksResult {
+	const macros = collectMacros(rawPreamble + '\n' + rawBlocks.join('\n\n'));
+	const preamble = expandMacros(rawPreamble, macros);
+	const blocks = rawBlocks.map((b) => expandMacros(b, macros));
 	const c = new Converter({ ...opts, inlineFootnotes: true });
 	const all = preamble + '\n' + blocks.join('\n\n');
 	c.hasChapters = /\\chapter\*?\s*[{[]/.test(stripComments(all));

@@ -25,6 +25,7 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
   - **Reading view**: the whole document rendered, with clickable references.
 - **Structure**: title, authors, abstract, numbered sections, lists, footnotes, quotes, `\input`/`\include`.
 - **Math**: inline and display math, `equation`, `align`, `gather`, `multline` and friends, with equation numbers.
+- **Macros**: the document's own `\newcommand`, `\renewcommand`, `\def` and `\DeclareMathOperator` definitions are expanded, in text, math and diagrams alike, including ones in `\input` files.
 - **Cross-references**: `\label`, `\ref`, `\eqref`, `\autoref`, `\cref` resolve to the right numbers and are clickable.
 - **Citations**: `\cite`, `\citep`, `\citet` and variants render as author–year text from your `.bib` file, or from a `thebibliography` block in the document. Hover a citation to see the full entry. A reference list is added at `\bibliography`.
 - **Figures and tables**: `\includegraphics` (PNG, JPG, SVG and PDF figures) with numbered captions, and simple `tabular` tables.
@@ -37,8 +38,8 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
 ## What it doesn't do
 
 - It doesn't run TeX, so it never produces a PDF. Use a LaTeX editor or another plugin for that.
-- TikZ diagrams need a separate plugin (see above). Diagrams that use the document's own `\newcommand`s don't work yet.
-- Custom macros (`\newcommand`) aren't expanded yet; macros used inside math show as errors.
+- TikZ diagrams need a separate plugin (see above).
+- Macros that program TeX (conditionals, counters, `\expandafter` and the like) aren't expanded; they're listed in the conversion report.
 - Sections in `\input` files don't appear in the Outline.
 - `.tex` files aren't indexed by Obsidian's search, backlinks or graph.
 

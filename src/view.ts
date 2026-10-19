@@ -387,7 +387,9 @@ export class TexView extends TextFileView implements LiveHost {
 				return /\\(input|include|subfile)\b/.test(t) ? (await expandIncludes(t, ctx.read)).src : t;
 			}),
 		);
-		const preamble = seg.preamble ? text.slice(seg.preamble.from, seg.preamble.to) : '';
+		const rawPreamble = seg.preamble ? text.slice(seg.preamble.from, seg.preamble.to) : '';
+		// Included preamble files can define macros, colours and TikZ styles the blocks need.
+		const preamble = /\\(input|include)\b/.test(rawPreamble) ? (await expandIncludes(rawPreamble, ctx.read)).src : rawPreamble;
 		const res = convertBlocks(preamble, blockTexts, ctx.opts);
 		this.deps = ctx.deps;
 		this.diagnostics = res.diagnostics;
