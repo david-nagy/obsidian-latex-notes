@@ -301,7 +301,9 @@ function formatCounter(style: string, n: number): string {
 		const a = n >= 1 && n <= 26 ? String.fromCharCode(96 + n) : String(n);
 		return style === 'Alph' ? a.toUpperCase() : a;
 	}
-	if (style === 'roman' || style === 'Roman') {
+	// Roman numerals only for 1–3999, as LaTeX; anything else (a document could set any value) stays
+	// arabic, so the loop below stays short.
+	if ((style === 'roman' || style === 'Roman') && n >= 1 && n < 4000) {
 		let r = '';
 		let k = n;
 		for (const [v, sym] of [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']] as const) {
@@ -310,8 +312,7 @@ function formatCounter(style: string, n: number): string {
 				k -= v;
 			}
 		}
-		const out = n > 0 ? r : String(n);
-		return style === 'Roman' ? out.toUpperCase() : out;
+		return style === 'Roman' ? r.toUpperCase() : r;
 	}
 	return String(n);
 }
