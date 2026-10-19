@@ -4,6 +4,7 @@
 import { MATH_ENVS, Node, parse, stripComments } from './parse';
 import { applyAccent, ACCENTS, escapeHtml, escapeMd, SYMBOLS, texText } from './text';
 import { BibEntry, parseName, splitNames } from './bib';
+import { TIKZ_ENVS, tikzBlock, tikzPreamble } from './tikz';
 
 export interface AssetRef {
 	kind: 'image' | 'pdf';
@@ -15,6 +16,8 @@ export interface ConvertOptions {
 	bib?: Map<string, BibEntry>;
 	// Resolves an \includegraphics path (as written in the source, relative to the main file).
 	resolveAsset?: (path: string) => AssetRef | null;
+	// A plugin draws ```tikz blocks, so TikZ diagrams are handed to it instead of shown as source.
+	tikz?: boolean;
 }
 
 export interface Diagnostics {
@@ -326,6 +329,7 @@ class Converter {
 	bib: Map<string, BibEntry>;
 	sec = [0, 0, 0, 0, 0];
 	hasChapters = false;
+	tikzHead: string[] = [];
 	appendix = false;
 	eq = 0;
 	fig = 0;
@@ -363,6 +367,7 @@ class Converter {
 		const docIdx = nodes.findIndex((n) => n.t === 'env' && n.name === 'document');
 		const preamble = docIdx >= 0 ? nodes.slice(0, docIdx) : nodes;
 		this.scanPreamble(preamble);
+		this.tikzHead = tikzPreamble(src.slice(0, docIdx >= 0 ? src.search(/\\begin\s*\{document\}/) : 0));
 		this.scanBibItems(nodes);
 		const body = docIdx >= 0 ? (nodes[docIdx] as Extract<Node, { t: 'env' }>).c : nodes;
 		const hasMaketitle = body.some((n) => n.t === 'cmd' && n.name === 'maketitle');
@@ -816,6 +821,10 @@ class Converter {
 	}
 
 	raw(name: string, raw: string, out: Out) {
+		if (this.opts.tikz && name in TIKZ_ENVS) {
+			out.block(fence('tikz', tikzBlock(name, raw, this.tikzHead)));
+			return;
+		}
 		this.diag.rawEnvironments[name] = (this.diag.rawEnvironments[name] ?? 0) + 1;
 		const tikz = /tikz|pgf|forest|circuit/.test(name);
 		const title = tikz ? 'TikZ figure (not rendered)' : `Unsupported: ${escapeMd(name)}`;
@@ -1289,6 +1298,7 @@ export function convertBlocks(preamble: string, blocks: string[], opts: ConvertO
 	c.hasChapters = /\\chapter\*?\s*[{[]/.test(stripComments(all));
 	c.usesBiblatex = /\\(addbibresource|printbibliography)\b/.test(stripComments(all));
 	c.scanPreamble(parse(preamble));
+	c.tikzHead = tikzPreamble(preamble);
 	c.scanBibItems(parse(blocks.join('\n\n')));
 	const headOut = new Out();
 	if (c.title && !/\\maketitle\b/.test(stripComments(blocks.join('\n')))) c.emitTitle(headOut);

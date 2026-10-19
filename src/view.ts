@@ -1,4 +1,4 @@
-import { apiVersion, Component, HeadingCache, Keymap, MarkdownRenderer, Modal, normalizePath, Notice, setIcon, Setting, setTooltip, TextFileView, TFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
+import { apiVersion, Component, HeadingCache, Keymap, MarkdownPreviewRenderer, MarkdownRenderer, Modal, normalizePath, Notice, setIcon, Setting, setTooltip, TextFileView, TFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { Annotation, Compartment, EditorState } from '@codemirror/state';
 import { drawSelection, EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -13,6 +13,14 @@ import { clearLiveCache, LiveData, LiveHost, livePreview, liveData, refreshLive 
 import { texHighlighter } from './highlight';
 import { scanHeadings } from './tex/headings';
 import type TexViewPlugin from './main';
+
+// True when a plugin (TikZJax, TikZJax Next, …) draws ```tikz blocks. Obsidian keeps registered code
+// block processors in MarkdownPreviewRenderer.codeBlockPostProcessors, which isn't in the public
+// typings; if that ever changes, diagrams just stay as LaTeX source, as without such a plugin.
+function hasTikzRenderer(): boolean {
+	const processors = (MarkdownPreviewRenderer as unknown as { codeBlockPostProcessors?: Record<string, unknown> }).codeBlockPostProcessors;
+	return !!processors && typeof processors === 'object' && 'tikz' in processors;
+}
 
 export const VIEW_TYPE_TEX = 'latex-notes';
 
@@ -365,7 +373,7 @@ export class TexView extends TextFileView implements LiveHost {
 			}
 			return null;
 		};
-		return { opts: { bib, resolveAsset }, read, deps };
+		return { opts: { bib, resolveAsset, tikz: hasTikzRenderer() }, read, deps };
 	}
 
 	// --- live preview host ----------------------------------------------------

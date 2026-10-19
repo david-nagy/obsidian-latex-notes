@@ -31,12 +31,13 @@ Open `.tex` files in Obsidian as if they were notes. LaTeX Notes converts LaTeX 
 - **Theorems and proofs** render as callouts.
 - **Outline**: Obsidian's core Outline pane lists the document's sections, highlights the current one and jumps to a section on click.
 - **New documents**: the "Create new LaTeX document" command (also in the folder context menu) creates a `.tex` file from a template of your choice.
-- Anything unsupported (TikZ, unknown environments, complex tables) shows as a collapsed block with the original source instead of breaking the page.
+- **TikZ diagrams** (`tikzpicture`, `tikz-cd`, `circuitikz`, `forest`) are drawn when a plugin that renders `tikz` code blocks is installed, such as [TikZJax Next](https://github.com/JackVinati/tikzjax-next) (works offline and on iOS). The document's TikZ libraries, styles and diagram packages are passed along.
+- Anything unsupported (unknown environments, complex tables, TikZ without such a plugin) shows as a collapsed block with the original source instead of breaking the page.
 
 ## What it doesn't do
 
 - It doesn't run TeX, so it never produces a PDF. Use a LaTeX editor or another plugin for that.
-- TikZ and other drawing packages aren't rendered.
+- TikZ diagrams need a separate plugin (see above). Diagrams that use the document's own `\newcommand`s don't work yet.
 - Custom macros (`\newcommand`) aren't expanded yet; macros used inside math show as errors.
 - Sections in `\input` files don't appear in the Outline.
 - `.tex` files aren't indexed by Obsidian's search, backlinks or graph.
